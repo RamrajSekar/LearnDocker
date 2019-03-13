@@ -1,0 +1,669 @@
+Use this website to execute docker commands: https://labs.play-with-docker.com/
+
+Docker Container:
+	• It is similar to virtual machines and it'll replace the VM
+	• It is popular packaging and run-time format
+	• It doesn't have kernel
+
+Image vs. Container:
+Image is an application we want to run	Container is an instance of that image running as a process, You can've many container running same image.
+
+Example of an image: Nginx websever, Tomcat webserver,mysql server
+
+NOTE: Docker's default image "registry" is called as Docker Hub[hub.docker.com]
+
+To start docker service:
+[root@localhost ~]# sudo service docker start
+Redirecting to /bin/systemctl stop  docker.service
+
+To stop docker service:
+[root@localhost ~]# sudo service docker stop
+Redirecting to /bin/systemctl stop  docker.service
+
+
+To run nginx image:
+[root@localhost ~]# docker container run --publish  80:80 nginx
+
+The above command has followed below steps:
+	A. Downloaded image 'nginx' from Docker hub
+	B. Started a new container from that image
+	C. Opened port 80 on the host IP
+	D. Routes that traffic to the container IP, port 80
+
+What happens when we run the docker container?
+	1. Looks for that image locally[for ex nginx in our case] in image cache,if it doesn't find anything
+	2. It looks in remote image repository(Defaults to docker hub)
+	3. Downloads the latest version if the version is not mentioned[to mention version image:version{nginx:1.1}]
+	4. Creates a new container based on that image and prepares to start
+	5. Gives it a virtual IP on a private network inside docker engine
+	6. Opens up port mentioned[i.e. 80 in our case] on host and forward to respective port[i.e. 80 in our case] in container.
+	7. Starts container by using the CMD in the image dockerfile
+
+Changing the default values in the command:
+Docker container run --publish 8080:80 --name webhost -d nginx:1.11 nginx -T
+		[change host listeneting port]                                     [version] [CMD run on start]
+
+
+CONTAINER :
+APP A	APP B
+BINS/LIBS	BINS LIBS
+DOCKER ENGINE
+HOST OS
+SERVER
+
+
+VM:
+APP A	APP B
+BINS/LIBS	BINS/LIBS
+GUEST OS	GUEST OS
+HYPERVISOR
+HOST OS
+SERVER
+
+MAJOR DIFFERENCE
+Containers are not mini vm's	
+They are just processes	
+Limited to what resources they can access	
+Exit when process stops	
+
+One way to check local host in linux
+[root@localhost ~]# curl localhost
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+    body {
+        width: 35em;
+        margin: 0 auto;
+        font-family: Tahoma, Verdana, Arial, sans-serif;
+    }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+[root@localhost ~]# docker container logs webhost2
+172.17.0.1 - - [21/Dec/2018:17:57:19 +0000] "GET / HTTP/1.1" 200 612 "-" "curl/7.29.0" "-"
+172.17.0.1 - - [21/Dec/2018:17:59:09 +0000] "GET / HTTP/1.1" 200 612 "-" "curl/7.29.0" "-"
+172.17.0.1 - - [21/Dec/2018:17:59:13 +0000] "GET / HTTP/1.1" 200 612 "-" "curl/7.29.0" "-"
+
+Assignment to Manage Multiple Containers:
+#Run a nginx,a mysql, and a https(apache) server
+#Run all of the --detach or -d, name them with --name
+#nginx should be in 80:80,https in 8080:80,mysql on 3306:3306
+#When runnning mysql,use --env or -e option to pass in MYSQL_RANDOM_ROOT_PASSWORD=yes
+#Clean them all with one command
+#Ensure everything is correct after cleanup
+
+
+Password for Mysql - ziej7Yu4uzo1phe3tai0laifieYi7dei
+
+Solution:
+=========
+Step 1: Created and Running three images
+
+[root@localhost dir]# docker container ls
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                               NAMES
+8ce01740719a        nginx               "nginx -g 'daemon of…"   13 seconds ago      Up 12 seconds       0.0.0.0:80->80/tcp                  proxy
+77ddef1f42f2        httpd               "httpd-foreground"       2 minutes ago       Up 2 minutes        0.0.0.0:8080->80/tcp                webserver
+00bbdd27cea1        mysql               "docker-entrypoint.s…"   7 minutes ago       Up 7 minutes        0.0.0.0:3306->3306/tcp, 33060/tcp   db
+
+Step 2: Stop all three images
+[root@localhost dir]# docker container stop 8ce01740719a 77ddef1f42f2 00bbdd27cea1
+8ce01740719a
+77ddef1f42f2
+00bbdd27cea1
+
+Step 3: Check if they're stopped
+[root@localhost dir]# docker container ls -a
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS                          PORTS               NAMES
+8ce01740719a        nginx               "nginx -g 'daemon of…"   5 minutes ago       Exited (0) About a minute ago                       proxy
+77ddef1f42f2        httpd               "httpd-foreground"       7 minutes ago       Exited (0) About a minute ago                       webserver
+00bbdd27cea1        mysql               "docker-entrypoint.s…"   12 minutes ago      Exited (0) About a minute ago                       db
+b6f4b1a813d7        friendlyhello       "python app.py"          22 minutes ago      Exited (0) 19 minutes ago                           musing_haibt
+dd0974a7fb34        mongo               "docker-entrypoint.s…"   11 hours ago        Exited (0) 11 hours ago                             mongo
+27fcffcfdd10        nginx               "nginx -g 'daemon of…"   33 hours ago        Exited (0) 11 hours ago                             webhost2
+
+Step 4: clean them all with one command
+[root@localhost dir]# docker container rm 8ce01740719a 77ddef1f42f2 00bbdd27cea1
+8ce01740719a
+77ddef1f42f2
+00bbdd27cea1
+
+Step 5: Verify that all the containers are deleted
+[root@localhost dir]# docker container ls -a
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS                      PORTS               NAMES
+b6f4b1a813d7        friendlyhello       "python app.py"          23 minutes ago      Exited (0) 20 minutes ago                       musing_haibt
+dd0974a7fb34        mongo               "docker-entrypoint.s…"   11 hours ago        Exited (0) 11 hours ago                         mongo
+27fcffcfdd10        nginx               "nginx -g 'daemon of…"   33 hours ago        Exited (0) 11 hours ago                         webhost2
+======================================================================================================================
+What is happening inside the container: Process monitoring of a container?
+……………………………………………………………………………………………………………………
+
+	1. Run two container for example: nginx and mysql
+[root@localhost ~]# docker container ls
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                 NAMES
+847da744bc2d        mysql               "docker-entrypoint.s…"   2 minutes ago       Up 2 minutes        3306/tcp, 33060/tcp   mysql
+27fcffcfdd10        nginx               "nginx -g 'daemon of…"   4 days ago          Up 6 minutes        0.0.0.0:80->80/tcp    webhost2
+
+	2. Using top command to get the process running inside specific container
+[root@localhost ~]# docker container top mysql
+UID                 PID                 PPID                C                   STIME               TTY                 TIME                CMD
+systemd+            3004                2988                1                   06:43               ?                   00:00:01            mysqld
+[root@localhost ~]# docker container top webhost2
+UID                 PID                 PPID                C                   STIME               TTY                 TIME                CMD
+root                2910                2894                0                   06:39               ?                   00:00:00            nginx: master process nginx -g daemon off;
+101                 2938                2910                0                   06:39               ?                   00:00:00            nginx: worker process
+
+	3. Using inspect command to get the metadata of the container in json format shows how it was started and running but not the live performance data will be showed
+[root@localhost ~]# docker container inspect mysql
+[
+    {
+        "Id": "847da744bc2dac15fbf82bd8471d6993c07634625ddbfba062b2e77d5ac07ee8",
+        "Created": "2018-12-26T11:43:16.166757121Z",
+        "Path": "docker-entrypoint.sh",
+        "Args": [
+            "mysqld"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 3004,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2018-12-26T11:43:17.247513955Z",
+            "FinishedAt": "0001-01-01T00:00:00Z"
+        },
+
+	4. Using stats command we can get the live status of a container:
+[root@localhost ~]# docker container stats  mysql
+CONTAINER ID        NAME                CPU %               MEM USAGE / LIMIT     MEM %               NET I/O             BLOCK I/O           PIDS
+847da744bc2d        mysql               0.85%               365.7MiB / 992.7MiB   36.84%              648B / 0B           440MB / 995MB       37
+847da744bc2d        mysql               0.77%               365.7MiB / 992.7MiB   36.84%              648B / 0B           440MB / 995MB       37
+Note: Type ctrlr+c to come out of this
+
+
+
+======================================================================================================================
+Docker basic commands:
+--------------------------------
+To list running processes in specific container:
+Docker top <processname>
+NOTE: Only running process will be displayed
+
+To list all the process running in the host system:
+Ps  aux
+NOTE: Only running process will be displayed
+
+To list the process running in docker:
+Docker ps
+NOTE: Only running process will be displayed
+
+To find the stopped process:
+ps aux | grep mongod
+root      2983  0.0  0.0 112648   960 pts/0    S+   10:23   0:00 grep --color=auto mongod[will be red color]
+
+
+
+
+
+To check the list of image available:
+docker image ls 
+
+To check the list of containers available
+docker container ls 
+
+Pull existing image from docker hub:
+Docker pull <image name>
+
+To run the container:
+docker run -d -p 442:80 nginx 
+	-d --makes the docker container to run as background deamon
+	-p --port mapping bt the host and container
+	442:80 ---442 refers to host port and 80 refers to contanier port(nginx always runs on port 80)
+O/p: Docker conatiner Id will be generated
+
+To check the list of Docker image available in local repo:
+Docker image ls
+
+To check the list of containers running in local repo:
+Docker container ls
+Docker container ls --all --> To display all the container except deleted.
+Docker ps -a
+
+To collect log:
+Docker container logs <first-four-digits of container id>
+
+To connect with docker container:
+Docker exec -it <first-four-digits of container id> /bin/bash
+This will take you as a root user into docker container.
+
+To stop the container:
+Docker container stop  <first-four-digits of container id>
+
+To start the container:
+Docker container start  <first-four-digits of container id>
+
+To delete the container: Deleted container can't be retreived
+Step 1: stop the docker container
+Step 2: Docker container rm  <first-four-digits of container id>
+
+To delete bunch of containers on the go:
+$ docker rm $(docker ps -a -q -f status=exited)
+
+The above command deletes all containers that have a status of exited. Here the -q flag, only returns the numeric IDs and -f filters output based on conditions provided. One last thing that'll be useful is the --rm flag that can be passed to docker run which automatically deletes the container once it's exited from. For one off docker runs, --rm flag is very useful.
+
+
+To remove a docker image: we can't remove an image if  container is running or stopped, so we've to delete the container first.
+Docker image rm nginx
+
+To get the container id by status:
+[test@ram-rtp-rhel7 ~]$ docker ps -a -q -f status=exited
+997c52da2c94
+ee6a39cb8b90
+0c7111c78982
+00bf377ba806
+7302086880f8
+6970b4a45b4b
+
+
+Build Docker container image
+	A. Manual Method: First run a container and make some changes in container then commit to docker image
+		a. Check the changes made in container:
+		Docker container diff  <first-four-digits of container id>
+		b. Commit the change to container in local rep:
+		Docker container committ  <first-four-digits of container id>
+		c. Set the name and tag:
+		Docker image tag <first-four-digits of container id> <repo name> <tag name>
+		d. Push to updates to docker hub:
+			i. Docker login[Docker hub credentials]
+			ii. Docker push <image name>:<tag>
+			iii. verify in docker hub
+	B. Automation Method: 
+
+GETTING A SHEL INSIDE CONTAINERS[Not ssh]:
+----------------------------------------------------------------
+To run the default command in bash
+[root@localhost ~]# docker container run -it --name proxy nginx bash
+root@9eacd06e0bc3:/# ls -al
+total 8
+drwxr-xr-x.   1 root root    6 Dec 26 11:55 .
+drwxr-xr-x.   1 root root    6 Dec 26 11:55 ..
+-rwxr-xr-x.   1 root root    0 Dec 26 11:55 .dockerenv
+drwxr-xr-x.   2 root root 4096 Nov 12 00:00 bin
+drwxr-xr-x.   2 root root    6 Oct 20 10:40 boot
+drwxr-xr-x.   5 root root  360 Dec 26 11:55 dev
+drwxr-xr-x.   1 root root   66 Dec 26 11:55 etc
+drwxr-xr-x.   2 root root    6 Oct 20 10:40 home
+drwxr-xr-x.   1 root root   45 Nov 12 00:00 lib
+drwxr-xr-x.   2 root root   34 Nov 12 00:00 lib64
+drwxr-xr-x.   2 root root    6 Nov 12 00:00 media
+drwxr-xr-x.   2 root root    6 Nov 12 00:00 mnt
+drwxr-xr-x.   2 root root    6 Nov 12 00:00 opt
+dr-xr-xr-x. 113 root root    0 Dec 26 11:55 proc
+drwx------.   2 root root   37 Nov 12 00:00 root
+drwxr-xr-x.   3 root root   30 Nov 12 00:00 run
+drwxr-xr-x.   2 root root 4096 Nov 12 00:00 sbin
+drwxr-xr-x.   2 root root    6 Nov 12 00:00 srv
+dr-xr-xr-x.  13 root root    0 Dec 26 11:29 sys
+drwxrwxrwt.   1 root root    6 Nov 27 22:21 tmp
+drwxr-xr-x.   1 root root   66 Nov 12 00:00 usr
+drwxr-xr-x.   1 root root   17 Nov 12 00:00 var
+
+Where:
+-i: interative
+-t : sudo tty
+Bash: is the command used to run at start time
+
+NOTE: Ubuntu by default runs in bash so no need to mention bash
+[root@localhost ~]# docker container run -it --name ubuntu ubuntu
+
+By default into ubuntu container: install required package as below example
+root@5a84928547c8:/# apt-get install -y curl
+Check curl:
+root@5a84928547c8:/# curl google.com
+<HTML><HEAD><meta http-equiv="content-type" content="text/html;charset=utf-8">
+<TITLE>301 Moved</TITLE></HEAD><BODY>
+<H1>301 Moved</H1>
+The document has moved
+<A HREF="http://www.google.com/">here</A>.
+</BODY></HTML>
+
+To rerun/start an existing container and get inside shell:
+[root@localhost ~]# docker container start -ai ubuntu
+root@5a84928547c8:/# curl google.com
+<HTML><HEAD><meta http-equiv="content-type" content="text/html;charset=utf-8">
+<TITLE>301 Moved</TITLE></HEAD><BODY>
+<H1>301 Moved</H1>
+The document has moved
+<A HREF="http://www.google.com/">here</A>.
+</BODY></HTML>
+
+To see the shell inside a running contianer: Use exec command
+Step 1: Start a container
+[root@localhost ~]# docker container start mysql
+mysql
+
+Step 2: get into bash
+[root@localhost ~]# docker container exec -it mysql bash
+root@847da744bc2d:/# ps aux
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+mysql        1  2.0 37.0 1358156 376612 ?      Ssl  17:41   0:02 mysqld
+root        59  0.0  0.2  18184  2064 pts/0    Ss   17:42   0:00 bash
+root       379  0.0  0.1  36632  1588 pts/0    R+   17:44   0:00 ps aux
+
+This shows that mysql is running
+
+To run a image which is not having bash in it:
+[root@localhost ~]# docker image pull alpine
+[root@localhost ~]# docker image ls
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+friendlyhello       latest              37ff432567b0        4 days ago          131MB
+alpine              latest              3f53bb00af94        6 days ago          4.41MB
+nginx               latest              568c4670fa80        4 weeks ago         109MB
+mongo               latest              525bd2016729        5 weeks ago         383MB
+ubuntu              latest              93fd78260bd1        5 weeks ago         86.2MB
+python              2.7-slim            0dc3d8d47241        5 weeks ago         120MB
+mysql               latest              f991c20cb508        5 weeks ago         486MB
+httpd               latest              2a51bb06dc8b        5 weeks ago         132MB
+hello-world         latest              4ab4c602aa5e        3 months ago        1.84kB
+
+[root@localhost ~]# docker container run -it alpine bash
+docker: Error response from daemon: OCI runtime create failed: container_linux.go:348: starting container process caused "exec: \"bash\": executable file not found in $PATH": unknown.
+[root@localhost ~]# docker container run -it alpine sh
+/ # ps aux
+PID   USER     TIME  COMMAND
+    1 root      0:00 sh
+    6 root      0:00 ps aux
+
+NOTE: We'll see an error when bash is not exist instead replace bash with sh to connect with the container and install bash
+
+DOCKER NETWORK DEFAULTS:
+----------------------------------------
+	• When we start a docker container:
+	• Each container connected to a private virtual network bridge
+	• Each virtual network routes through NAT firewall on host IP
+	• All containers on a virtual network can talk to each other without -p
+	• Best practise is to create a new virtual network for each app:
+		○ Network  "my_web_app" for mysql and php/apache containers
+		○ "my_api" for mongo and nodejs containers
+NOTE: 
+	• To talk to each other both containers should be in same network.
+	• Remember publishing port(-p) is always in host:container format
+
+What can be done:
+	• Create multiple new virtual networks
+	• Attach containers to more than one virtual network or make containers doesn't talk to any networks
+	• Skip virtual n/w and use host ip(--net=host)
+	• Use diff Docker network drivers to gain new abilities
+
+
+
+DOCKER NETWORK CONCEPTS:
+
+Run a container:
+[root@localhost ~]# docker container run -p 80:80 --name webhost -d nginx
+4a5697104528f2d416771fe4ff4338ddca4a220f34796da9367cc16888a8b40a
+[root@localhost ~]# docker container ls -l
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                NAMES
+4a5697104528        nginx               "nginx -g 'daemon of…"   58 seconds ago      Up 56 seconds       0.0.0.0:80->80/tcp   webhost
+
+To check the port assigned to a container:
+[root@localhost ~]# docker container port <container name>
+80/tcp -> 0.0.0.0:80
+
+To get the IP address of a container:
+[root@localhost ~]# docker container inspect --format '{{ .NetworkSettings.IPAddress}}' <container name>
+172.17.0.2
+
+NOTE: 
+	• This IP address is from a virtual network
+	• We can't have two containers listening on the same port at host level and if you do so we'll get an error, This is a limitation of how IP network works.
+
+
+Docker Network Security:
+
+	• Create your apps so frontend/backend in same server then they sit on same Docker Network,So it's protected.
+	• Their inter communication never leaves the host server
+	• If all app containers are in one network together in a virtual network we're going to expose the ports on your hosts that you specifically use with -p which provides better security with firewall inside their virtual network.
+	• This getter even better with Docker Swarm
+	
+
+To check the list of docker networks created:
+[root@localhost ~]# docker network ls
+NETWORK ID          NAME                DRIVER              SCOPE
+3494cf26b9bd        bridge              bridge              local
+c3284a9e7e36        host                host                local
+b94a36798c8a        none                null                local
+8f7c89efc3eb        selnet              bridge              local
+
+NOTE: Bridge is the default network in docker[i.e. NAT] where containers attached to them.
+
+To view the IP and Containers of each network:
+[root@localhost ~]# docker network inspect bridge
+[
+    {
+        "Name": "bridge",
+        "Id": "3494cf26b9bdf91317846a518c459270ea9dc5f57a0403b969fa11a998f0fc59",
+        "Created": "2018-12-28T06:02:04.893038693-05:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.17.0.0/16",
+                    "Gateway": "172.17.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {},
+        "Options": {
+            "com.docker.network.bridge.default_bridge": "true",
+            "com.docker.network.bridge.enable_icc": "true",
+            "com.docker.network.bridge.enable_ip_masquerade": "true",
+            "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+            "com.docker.network.bridge.name": "docker0",
+            "com.docker.network.driver.mtu": "1500"
+        },
+        "Labels": {}
+    }
+]
+
+To create a new virtual network:
+[root@localhost ~]# docker network create my_app_net
+035cf4d90fc18009c32a0b018df105325efaa74b90e79d3f4e859e0737eaa4ee
+[root@localhost ~]# docker network ls
+NETWORK ID          NAME                DRIVER              SCOPE
+3494cf26b9bd        bridge              bridge              local
+c3284a9e7e36        host                host                local
+035cf4d90fc1        my_app_net          bridge              local
+b94a36798c8a        none                null                local
+8f7c89efc3eb        selnet              bridge              local
+
+NOTE: New network was assigned to bridge which is the default network driver.
+
+To create a container and specify the network:
+[root@localhost ~]# docker container run -d --name new_nginx --network my_app_net nginx
+9fe7e1349289553cca0fe1ba9f2c16034484af738f9541221745c2595cc9fc06
+[root@localhost ~]# docker network inspect my_app_net
+[
+    {
+        "Name": "my_app_net",
+        "Id": "035cf4d90fc18009c32a0b018df105325efaa74b90e79d3f4e859e0737eaa4ee",
+        "Created": "2018-12-28T06:15:23.158198502-05:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "172.19.0.0/16",
+                    "Gateway": "172.19.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "9fe7e1349289553cca0fe1ba9f2c16034484af738f9541221745c2595cc9fc06": {
+                "Name": "new_nginx",
+                "EndpointID": "209ca40dad480884a07d451d595b72cc177cdea562984b8dc3b7975676e21a8d",
+                "MacAddress": "02:42:ac:13:00:02",
+                "IPv4Address": "172.19.0.2/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {},
+        "Labels": {}
+    }
+]
+
+NOTE: New IP address will be allocated randomly.
+
+To connect a container to multiple network:
+[root@localhost ~]# docker network connect <contianer_from> <container_to>
+NOTE: Now run docker container inspect <container_to> command to see two networks attached to a container.
+
+To disconnect
+[root@localhost ~]# docker network disconnect <contianer_from> <container_to>
+NOTE: Now run docker container inspect <container_to> command to see only one network is attached to a container.
+
+Docker Network Default security:
+	• Create your app sit same docker network
+	• Their inner communication never leaves host
+	• All externally exposed ports are closed by default
+	• To expose manually use -p which is better default security.
+	• Network Scale up and scale down is much better in docker swarm
+
+07-01-2019
+Docker Network DNS:
+	• Naming a DNS is pretty important as we'll use it to talk with containers instead of IP's which is anti-pattern,So avoid using IP to communicate 
+	with containers as the IP is dynamic and complicated to deal with that.
+	• Docker defaults the hostname to the container name however we can set aliases.
+
+Use one container to talk to other container[Eg: Use PHP Server to talk to MySQL Server]
+	• Create a new network
+	• Create a two container and assign both to new network
+	• Run exec -it cmd below
+	• This resolved dns resolution which interacts with each other,Say in real-time you want php server to connect with mysql or while using docker swarm or kubernetes as cluster we can use this technique.
+
+[test@ram-rtp-rhel7 ~]$ docker container exec -it <contianer1> ping <container2>
+PING new_nginx (172.18.0.2): 56 data bytes
+64 bytes from 172.18.0.2: seq=0 ttl=64 time=0.107 ms
+64 bytes from 172.18.0.2: seq=1 ttl=64 time=0.134 ms
+64 bytes from 172.18.0.2: seq=2 ttl=64 time=0.134 ms
+64 bytes from 172.18.0.2: seq=3 ttl=64 time=0.132 ms
+64 bytes from 172.18.0.2: seq=4 ttl=64 time=0.126 ms
+64 bytes from 172.18.0.2: seq=5 ttl=64 time=0.086 ms
+64 bytes from 172.18.0.2: seq=6 ttl=64 time=0.127 ms
+64 bytes from 172.18.0.2: seq=7 ttl=64 time=0.150 ms
+^C
+--- new_nginx ping statistics ---
+8 packets transmitted, 8 packets received, 0% packet loss
+NOTE: Create two container in same network and connect each other containers using 'exec -it and ping' command
+
+[root@localhost ~]# docker container exec -it new_nginx ping my_nginx
+PING my_nginx (172.20.0.3): 56 data bytes
+64 bytes from 172.20.0.3: seq=0 ttl=64 time=0.103 ms
+64 bytes from 172.20.0.3: seq=1 ttl=64 time=0.262 ms
+64 bytes from 172.20.0.3: seq=2 ttl=64 time=0.206 ms
+64 bytes from 172.20.0.3: seq=3 ttl=64 time=0.281 ms
+^C
+--- my_nginx ping statistics ---
+4 packets transmitted, 4 packets received, 0% packet loss
+round-trip min/avg/max = 0.103/0.213/0.281 ms
+
+NOTE: The default bridge network doesn't have DNS server built-in to it by default however we can manually link it with --link option which has to be done everytime instead create a new network and map multiple containers to them so communication bt the containers become much easier.
+
+
+ASSIGNMENT 1 - CLI APP TESTING: Check curl version in different linux distributions like Centos or Ubuntu
+In general being a Support Engineer in pre-container world you've to setup a virtual environment and wait for OS to install curl and be ready, So it's time consuming.
+
+
+Use: centos v7 and ubuntu v14.04, using -it and bash command,finally use --rm command to clean up
+Steps:
+	• Apt-get update && apt-get installl curlt
+	• Yum update curl
+	• Curl --version
+
+Solution:
+[root@localhost ~]# docker container run --rm -it ubuntu:14.04 bash
+root@3951d67f4a6e:/# apt-get update && yum update curl
+.
+.
+Reading package lists... Done
+bash: yum: command not found
+
+root@3951d67f4a6e:/# apt-get update && apt-get install -y curl
+.
+.
+Updating certificates in /etc/ssl/certs... 148 added, 0 removed; done.
+Running hooks in /etc/ca-certificates/update.d....done.
+
+root@3951d67f4a6e:/# curl --version
+curl 7.35.0 (x86_64-pc-linux-gnu) libcurl/7.35.0 OpenSSL/1.0.1f zlib/1.2.8 libidn/1.28 librtmp/2.3
+Protocols: dict file ftp ftps gopher http https imap imaps ldap ldaps pop3 pop3s rtmp rtsp smtp smtps telnet tftp
+Features: AsynchDNS GSS-Negotiate IDN IPv6 Largefile NTLM NTLM_WB SSL libz TLS-SRP
+
+
+[root@localhost ~]# docker container run --rm -it centos:7 bash
+In centos machine:
+[root@18e8edba990e /]# yum update curl
+.
+.
+No packages marked for update
+[root@18e8edba990e /]# curl --version
+curl 7.29.0 (x86_64-redhat-linux-gnu) libcurl/7.29.0 NSS/3.36 zlib/1.2.7 libidn/1.28 libssh2/1.4.3
+Protocols: dict file ftp ftps gopher http https imap imaps ldap ldaps pop3 pop3s rtsp scp sftp smtp smtps telnet tftp
+Features: AsynchDNS GSS-Negotiate IDN IPv6 Largefile NTLM NTLM_WB SSL libz unix-sockets
+
+Exit from the centos and ubuntu machine and check container list:
+Before exit from ubuntu/centos image
+[root@localhost ~]# docker ps -a
+CONTAINER ID        IMAGE               COMMAND                  CREATED              STATUS                      PORTS                NAMES
+18e8edba990e        centos:7            "bash"                   About a minute ago   Up About a minute                                determined_greider
+14f728dd5f75        centos:7            "bash"                   23 hours ago         Exited (127) 23 hours ago                        centosC
+c73ca5a157d1        nginx:1.15.6        "nginx -g 'daemon of…"   23 hours ago         Exited (0) 23 hours ago                          webhost1
+a1f5afdc4f1a        nginx               "nginx -g 'daemon of…"   24 hours ago         Exited (0) 24 hours ago                          webhost
+146001a84fd9        nginx:alpine        "nginx -g 'daemon of…"   47 hours ago         Exited (255) 46 hours ago   80/tcp               my_nginx
+96e3b0964c6d        nginx:alpine        "nginx -g 'daemon of…"   47 hours ago         Exited (255) 46 hours ago   0.0.0.0:80->80/tcp   new_nginx
+
+
+After exit from ubuntu/centos:
+[root@localhost ~]# docker container ls -a
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS                      PORTS                NAMES
+14f728dd5f75        centos:7            "bash"                   23 hours ago        Exited (127) 23 hours ago                        centosC
+c73ca5a157d1        nginx:1.15.6        "nginx -g 'daemon of…"   24 hours ago        Exited (0) 24 hours ago                          webhost1
+a1f5afdc4f1a        nginx               "nginx -g 'daemon of…"   24 hours ago        Exited (0) 24 hours ago                          webhost
+146001a84fd9        nginx:alpine        "nginx -g 'daemon of…"   47 hours ago        Exited (255) 47 hours ago   80/tcp               my_nginx
+96e3b0964c6d        nginx:alpine        "nginx -g 'daemon of…"   47 hours ago        Exited (255) 47 hours ago   0.0.0.0:80->80/tcp   new_nginx
+
+
+
+NOTE: 
+	1. Centos will always have the least version
+	2. --rm in run command will the remove the image on exit
